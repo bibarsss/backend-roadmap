@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Backend Roadmap: Go и PHP</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f5bd3'/%3E%3Cpath d='M9 17l5 5 9-11' stroke='white' stroke-width='3.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: одна колонка-трекер; сверху прогресс и "что делать сегодня", ниже фазы → недели → задачи */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --fg:#17202e; --muted:#5b6678; --line:#d9dee7;
+  --accent:#2f5bd3; --accent-soft:#e3eafb; --done:#1f8a5b; --done-soft:#e1f3ea;
+  --display:"Unbounded","IBM Plex Sans",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10141c; --surface:#171d28; --fg:#e6eaf2; --muted:#98a3b6; --line:#2a3242;
+  --accent:#7d9cf5; --accent-soft:#1f2a45; --done:#4cc790; --done-soft:#173327; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10141c; --surface:#171d28; --fg:#e6eaf2; --muted:#98a3b6; --line:#2a3242;
+  --accent:#7d9cf5; --accent-soft:#1f2a45; --done:#4cc790; --done-soft:#173327; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--body)}
+.wrap{max-width:860px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:flex;flex-direction:column;gap:28px}
+h1{font:700 clamp(24px,5vw,34px)/1.15 var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font:500 19px/1.3 var(--display);margin:0;text-wrap:balance}
+.lede{color:var(--muted);max-width:62ch;margin:8px 0 0}
+.mono{font-family:var(--mono)}
+.label{font:600 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat .n{font:700 24px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:14px}
+.bar i{display:block;height:100%;background:var(--done);width:0;transition:width .3s}
+.today{border-color:var(--accent);background:var(--accent-soft)}
+.today .task-t{font-weight:600;font-size:16px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font:500 13px/1 var(--body);border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:9px 12px;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.phase{display:flex;flex-direction:column;gap:12px}
+.phase-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--fg);padding-bottom:8px}
+.phase-head p{margin:4px 0 0;color:var(--muted);max-width:60ch}
+details.week{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+details.week[open]{border-color:var(--muted)}
+summary{list-style:none;cursor:pointer;padding:14px 16px;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+summary::-webkit-details-marker{display:none}
+.wk{font:600 12px var(--mono);color:var(--accent);min-width:44px}
+.wtitle{font-weight:600;min-width:0}
+.wcount{font:500 12px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.wcount.full{color:var(--done)}
+.wbody{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
+ul.tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+ul.tasks li label{display:grid;grid-template-columns:22px 1fr;gap:10px;padding:8px;border-radius:7px;cursor:pointer}
+ul.tasks li label:hover{background:var(--bg)}
+ul.tasks input{width:17px;height:17px;margin:2px 0 0;accent-color:var(--done)}
+ul.tasks .t{min-width:0}
+ul.tasks .d{display:block;color:var(--muted);font-size:13.5px}
+ul.tasks input:checked + .t{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line)}
+.deliv{font-size:13.5px;padding:10px 12px;border-radius:7px;background:var(--done-soft)}
+.deliv b{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--done);display:block;margin-bottom:2px}
+pre.prompt{white-space:pre-wrap;font:13px/1.5 var(--mono);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;margin:0;overflow-x:auto}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 14px;border-radius:8px;font-size:13px}
+.how ol{margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:66ch}
+@media (max-width:480px){summary{grid-template-columns:auto 1fr}.wcount{grid-column:2}}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+/* Синхронизация с GitHub */
+:root{--warn:#b7791f;--err:#c53030}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--warn:#e0a84a;--err:#f07171}}
+:root[data-theme="dark"]{--warn:#e0a84a;--err:#f07171}
+details.sync{padding:0}
+details.sync > summary{padding:12px 16px;font-size:13.5px;display:flex;align-items:center;gap:10px}
+details.sync > summary #syncText{flex:1;min-width:0}
+details.sync[open] > summary .label{visibility:hidden}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex:none}
+.dot[data-k="ok"]{background:var(--done)}
+.dot[data-k="sync"]{background:var(--accent);animation:pulse 1s ease-in-out infinite}
+.dot[data-k="warn"]{background:var(--warn)}
+.dot[data-k="err"]{background:var(--err)}
+@keyframes pulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.dot[data-k="sync"]{animation:none}}
+.sync-body{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--line);padding-top:14px}
+.field{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500}
+.field input{font:14px/1.3 var(--mono);padding:9px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--fg);width:100%;min-width:0}
+.hint{margin:0;color:var(--muted);font-size:13px;max-width:66ch}
+.hint a{color:var(--accent)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="label">~22 недели · 5 дней в неделю · 1–1,5 часа в день</div>
+    <h1 style="margin-top:10px">Backend Roadmap: Go и PHP</h1>
+    <p class="lede">Путь от «работал на поддержке» до бэкенд-разработчика: фундамент, SQL, современный PHP, Go, Docker и CI/CD, архитектура и итоговый проект. Каждая неделя заканчивается практическим результатом, который можно положить на GitHub.</p>
+  </header>
+
+  <section class="panel">
+    <div class="stats">
+      <div class="stat"><div class="label">Сделано задач</div><div class="n" id="sDone">0</div></div>
+      <div class="stat"><div class="label">Всего задач</div><div class="n" id="sTotal">0</div></div>
+      <div class="stat"><div class="label">Текущая неделя</div><div class="n" id="sWeek">1</div></div>
+      <div class="stat"><div class="label">Прогресс</div><div class="n" id="sPct">0%</div></div>
+    </div>
+    <div class="bar"><i id="pbar"></i></div>
+  </section>
+
+  <details class="panel sync" id="syncBox">
+    <summary><span class="dot" id="dot"></span><span id="syncText">Проверяю синхронизацию…</span><span class="label">Настроить</span></summary>
+    <div class="sync-body">
+      <p class="hint">Прогресс хранится в файле <span class="mono">progress.json</span> в твоём репозитории, поэтому он одинаковый на всех устройствах. Каждая отметка — это коммит.</p>
+      <label class="field">Репозиторий
+        <input id="cfgRepo" placeholder="login/backend-roadmap" autocomplete="off" spellcheck="false">
+      </label>
+      <label class="field">Токен GitHub
+        <input id="cfgToken" type="password" placeholder="github_pat_…" autocomplete="off" spellcheck="false">
+      </label>
+      <p class="hint">Нужен <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">fine-grained токен</a> с доступом только к этому репозиторию и правом <b>Contents: Read and write</b>. Токен хранится только в этом браузере и никуда, кроме GitHub, не отправляется. На каждом устройстве вводится один раз. Без токена страница показывает прогресс, но не может его сохранить.</p>
+      <div class="row">
+        <button class="primary" id="cfgSave">Сохранить</button>
+        <button id="syncNow">Синхронизировать сейчас</button>
+        <button id="cfgForget">Забыть токен</button>
+      </div>
+    </div>
+  </details>
+
+  <section class="panel today" id="today">
+    <div class="label">Сегодня</div>
+    <div class="task-t" id="todayTask" style="margin-top:8px"></div>
+    <div id="todayMeta" style="color:var(--muted);font-size:13.5px;margin:4px 0 12px"></div>
+    <div class="row">
+      <button class="primary" id="copyToday">Скопировать запрос для Claude</button>
+      <button id="doneToday">Отметить выполненной</button>
+    </div>
+  </section>
+
+  <section class="panel how">
+    <h2>Как заниматься каждый день</h2>
+    <ol>
+      <li>Создай в Claude проект «Backend Roadmap» и вставь в его инструкции текст ниже. Все учебные чаты веди внутри проекта.</li>
+      <li>Каждый день нажимай «Скопировать запрос для Claude» в блоке «Сегодня» и начинай с ним новый чат в проекте.</li>
+      <li>Сначала пиши код сам, потом присылай на ревью. Решения не проси, пока не попробовал.</li>
+      <li>Весь код клади в один репозиторий на GitHub, одна папка на неделю. Это и будет твоё портфолио.</li>
+    </ol>
+    <pre class="prompt" id="projPrompt" style="margin-top:12px"></pre>
+    <div class="row" style="margin-top:10px"><button id="copyProj">Скопировать инструкции для проекта</button></div>
+  </section>
+
+  <main id="phases" style="display:flex;flex-direction:column;gap:32px"></main>
+
+  <p style="color:var(--muted);font-size:13px;margin:0">Отметки сохраняются в репозитории на GitHub и видны на любом устройстве. Если связи нет, они ждут в браузере и отправятся при следующей синхронизации.</p>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const PROJECT_PROMPT = `Ты мой ментор по бэкенду. Я разработчик с 4 годами опыта на поддержке, писал на PHP, но системных знаний мало. Цель: стать бэкенд-разработчиком на Go и PHP, уверенно знать SQL, Docker, CI/CD и архитектуру.
+
+Как работаем:
+- Я присылаю тему дня из своего roadmap. Ты коротко объясняешь теорию (с примерами кода, сравнивая с PHP, где уместно), затем даёшь 1–2 практических задания на 45–60 минут.
+- Не давай готовых решений, пока я не попробую сам. Сначала подсказки.
+- Когда я присылаю код, делай ревью как сеньор на код-ревью: ошибки, стиль, производительность, безопасность.
+- В конце занятия задай 3 вопроса для самопроверки, как на собеседовании.
+- Пиши по-русски, термины оставляй на английском.`;
+
+const PHASES = [
+ {name:"Фундамент", note:"То, на что опирается всё остальное: терминал, Git, как работает веб.", weeks:[
+  {t:"Linux и терминал", tasks:[
+   ["Навигация, файлы, права","ls, cd, chmod, chown, пользователи и группы"],
+   ["Процессы и логи","ps, top, kill, journalctl, tail -f, grep по логам"],
+   ["Пайпы и перенаправления","|, >, >>, xargs, awk и sed на базовом уровне"],
+   ["SSH и ключи","генерация ключей, ~/.ssh/config, scp"],
+   ["Bash-скрипт","скрипт, который бэкапит папку и чистит старые бэкапы"]],
+   out:"Bash-скрипт бэкапа в репозитории roadmap"},
+  {t:"Git по-взрослому", tasks:[
+   ["Как устроен Git","коммиты, ветки, HEAD, staging"],
+   ["merge и rebase","разница, интерактивный rebase, разрешение конфликтов"],
+   ["Git flow и trunk-based","как работают команды, conventional commits"],
+   ["Pull request","создать PR в своём репо, сделать ревью самому себе"],
+   ["Спасение","reflog, reset, revert, cherry-pick"]],
+   out:"Репозиторий roadmap на GitHub с README и историей через PR"},
+  {t:"Как работает веб", tasks:[
+   ["HTTP","методы, статусы, заголовки, cookies; разобрать запросы через curl -v"],
+   ["DNS, TCP, TLS","что происходит, когда вводишь адрес в браузере"],
+   ["REST","ресурсы, идемпотентность, версионирование, коды ответов"],
+   ["Nginx","reverse proxy, PHP-FPM, как запрос доходит до PHP"],
+   ["Аутентификация","сессии, JWT, OAuth2 на уровне схемы"]],
+   out:"Конспект «что происходит при открытии сайта» своими словами"}
+ ]},
+ {name:"SQL и PostgreSQL", note:"Самый недооценённый навык. На собеседованиях его проверяют всегда.", weeks:[
+  {t:"Основы SQL", tasks:[
+   ["Установить PostgreSQL в Docker","docker run postgres, подключиться через psql или DBeaver"],
+   ["SELECT, WHERE, ORDER BY, LIMIT","на учебной базе (например, pagila или dvdrental)"],
+   ["JOIN","INNER, LEFT, RIGHT, FULL; 20 задач на джойны"],
+   ["GROUP BY и HAVING","агрегаты, подсчёты, отчёты"],
+   ["Подзапросы и CTE","WITH, вложенные запросы"]],
+   out:"Файл с 30 решёнными запросами"},
+  {t:"Проектирование и продвинутый SQL", tasks:[
+   ["Нормализация","1НФ–3НФ, когда денормализовать"],
+   ["Ключи и ограничения","PK, FK, UNIQUE, CHECK, ON DELETE"],
+   ["Оконные функции","ROW_NUMBER, RANK, LAG, SUM OVER"],
+   ["Спроектировать схему","интернет-магазин: пользователи, товары, заказы, оплаты"],
+   ["Миграции","зачем нужны, как писать up/down"]],
+   out:"ER-диаграмма и SQL-схема магазина"},
+  {t:"Производительность и транзакции", tasks:[
+   ["Индексы","B-tree, составные, частичные; когда индекс не помогает"],
+   ["EXPLAIN ANALYZE","читать план, найти и ускорить медленный запрос"],
+   ["Транзакции и ACID","BEGIN, COMMIT, ROLLBACK"],
+   ["Уровни изоляции и блокировки","аномалии, SELECT FOR UPDATE, дедлоки"],
+   ["Кейс N+1","что это и как его ловить"]],
+   out:"Отчёт: медленный запрос до и после индекса с планами"}
+ ]},
+ {name:"Современный PHP", note:"Подтянуть язык, на котором ты уже писал, до уровня продуктовой разработки.", weeks:[
+  {t:"PHP 8.x и ООП", tasks:[
+   ["Что нового в PHP 8","типы, enum, readonly, match, named arguments"],
+   ["ООП","интерфейсы, абстрактные классы, трейты, static"],
+   ["Composer и PSR","автозагрузка PSR-4, PSR-12"],
+   ["Исключения","свои исключения, обработка ошибок"],
+   ["Мини-проект без фреймворка","консольная утилита на чистом PHP с Composer"]],
+   out:"Консольная утилита на PHP 8 с автозагрузкой"},
+  {t:"SOLID и тесты", tasks:[
+   ["SOLID","каждый принцип на примере кода"],
+   ["Dependency Injection","DI-контейнер своими руками, 50 строк"],
+   ["PHPUnit","unit-тесты, моки, data providers"],
+   ["Статический анализ","PHPStan или Psalm, уровень 6+"],
+   ["Рефакторинг","переписать свою утилиту по SOLID с тестами"]],
+   out:"Утилита с тестами и PHPStan без ошибок"},
+  {t:"Laravel: основы", tasks:[
+   ["Жизненный цикл запроса","роутинг, middleware, контроллеры"],
+   ["Eloquent","модели, связи, eager loading против N+1"],
+   ["Миграции и сидеры","схема магазина из SQL-фазы"],
+   ["Валидация и Form Requests","API Resources"],
+   ["REST API","CRUD товаров и заказов"]],
+   out:"REST API магазина на Laravel"},
+  {t:"Laravel: продакшн-уровень", tasks:[
+   ["Аутентификация API","Sanctum, токены"],
+   ["Очереди","jobs, Redis, повторы, failed jobs"],
+   ["Кэширование","Redis, инвалидация кэша"],
+   ["Feature-тесты","тесты API с базой"],
+   ["Сервисный слой","вынести логику из контроллеров"]],
+   out:"API с авторизацией, очередью и тестами"}
+ ]},
+ {name:"Go", note:"Второй язык. Учим через сравнение с PHP: что похоже, что устроено иначе.", weeks:[
+  {t:"Синтаксис и типы", tasks:[
+   ["Установка, go mod, структура проекта","go run, go build"],
+   ["Типы, слайсы, мапы","чем слайс отличается от массива PHP"],
+   ["Структуры и методы","указатели, value и pointer receivers"],
+   ["Интерфейсы","неявная реализация, композиция вместо наследования"],
+   ["Ошибки","error, errors.Is/As, wrapping"]],
+   out:"Решить 10 задач из «Tour of Go» и Exercism"},
+  {t:"Конкурентность", tasks:[
+   ["Горутины","модель выполнения, отличие от PHP-FPM"],
+   ["Каналы","буферизованные, select"],
+   ["sync","WaitGroup, Mutex, Once"],
+   ["context","отмена и таймауты"],
+   ["Worker pool","параллельный скачиватель URL с ограничением"]],
+   out:"Worker pool с graceful shutdown"},
+  {t:"HTTP-сервис на Go", tasks:[
+   ["net/http","хендлеры, роутинг, middleware"],
+   ["JSON","encoding/json, валидация входных данных"],
+   ["Работа с БД","pgx или database/sql, sqlc"],
+   ["Миграции","goose или golang-migrate"],
+   ["Структура проекта","cmd, internal, слои handler/service/repository"]],
+   out:"REST API магазина на Go и PostgreSQL"},
+  {t:"Тесты и качество", tasks:[
+   ["testing","table-driven тесты"],
+   ["Моки через интерфейсы","тесты сервисного слоя"],
+   ["Интеграционные тесты","testcontainers с Postgres"],
+   ["Линтеры","golangci-lint"],
+   ["Логи и конфиг","slog, env-конфиг"]],
+   out:"Покрытие сервисного слоя тестами 70%+"},
+  {t:"Go в бою", tasks:[
+   ["gRPC","protobuf, простой сервис"],
+   ["Брокер сообщений","Kafka или RabbitMQ: продюсер и консьюмер"],
+   ["Graceful shutdown","сигналы, закрытие соединений"],
+   ["Профилирование","pprof, поиск утечек горутин"],
+   ["Связать сервисы","PHP-API отправляет событие, Go-сервис его обрабатывает"]],
+   out:"Два сервиса, общающиеся через очередь"}
+ ]},
+ {name:"Docker и CI/CD", note:"Чтобы код не только работал у тебя, но и сам собирался, тестировался и выкатывался.", weeks:[
+  {t:"Docker", tasks:[
+   ["Образы и контейнеры","слои, кэш, docker build"],
+   ["Dockerfile для Go","multi-stage сборка, маленький образ"],
+   ["Dockerfile для PHP","PHP-FPM и Nginx"],
+   ["docker compose","приложение, Postgres, Redis одним стеком"],
+   ["Сети и volumes","как контейнеры видят друг друга"]],
+   out:"docker compose up поднимает весь проект"},
+  {t:"CI/CD", tasks:[
+   ["GitHub Actions","workflow, jobs, steps"],
+   ["CI","линтер, тесты, сборка на каждый PR"],
+   ["Сборка образа","пуш в GitHub Container Registry"],
+   ["Деплой","на дешёвый VPS через SSH или compose"],
+   ["Секреты и окружения","staging и production"]],
+   out:"Зелёный пайплайн: PR → тесты → образ → деплой"}
+ ]},
+ {name:"Архитектура", note:"Как принимать решения, когда система растёт. Сюда же готовка к system design на собеседованиях.", weeks:[
+  {t:"Архитектура приложения", tasks:[
+   ["Слоистая и чистая архитектура","зависимости направлены внутрь"],
+   ["Гексагональная архитектура","порты и адаптеры"],
+   ["DDD на базовом уровне","сущности, value objects, агрегаты"],
+   ["Паттерны","Repository, Strategy, Factory, Adapter"],
+   ["Рефакторинг","перевести Go-сервис на порты и адаптеры"]],
+   out:"Схема архитектуры своего Go-сервиса"},
+  {t:"Распределённые системы", tasks:[
+   ["Монолит и микросервисы","когда что выбирать"],
+   ["Кэш","стратегии, cache-aside, проблемы инвалидации"],
+   ["Очереди и события","at-least-once, идемпотентность, outbox"],
+   ["Масштабирование БД","реплики, шардирование, партиционирование"],
+   ["CAP и консистентность","eventual consistency на примерах"]],
+   out:"Конспект решений с плюсами и минусами"},
+  {t:"System design и наблюдаемость", tasks:[
+   ["Метрики","Prometheus и Grafana для своего сервиса"],
+   ["Логи и трейсинг","структурные логи, OpenTelemetry"],
+   ["Разбор задачи","спроектировать сокращатель ссылок"],
+   ["Разбор задачи","спроектировать ленту новостей или чат"],
+   ["Mock-собеседование","Claude задаёт вопросы как интервьюер"]],
+   out:"Два разобранных system design кейса"}
+ ]},
+ {name:"Итоговый проект", note:"Собрать всё вместе в один проект для резюме.", weeks:[
+  {t:"Проект: проектирование", tasks:[
+   ["Выбрать идею","например, сервис бронирования или трекер задач"],
+   ["Требования","функциональные и нефункциональные"],
+   ["Схема БД и API","OpenAPI-спецификация"],
+   ["Архитектура","какие части на Go, какие на PHP, где очередь"],
+   ["Репозиторий и CI","скелет проекта с пайплайном"]],
+   out:"Документ дизайна и скелет репозитория"},
+  {t:"Проект: ядро", tasks:[
+   ["Основной домен","сущности и бизнес-логика с тестами"],
+   ["API","ключевые эндпоинты"],
+   ["Авторизация","регистрация и вход"],
+   ["Интеграционные тесты","на основные сценарии"],
+   ["Ревью","прислать Claude на полное код-ревью"]],
+   out:"Работающее ядро с тестами"},
+  {t:"Проект: асинхронность и инфраструктура", tasks:[
+   ["Фоновые задачи","уведомления или отчёты через очередь"],
+   ["Кэш","для самых частых запросов"],
+   ["Метрики и логи","дашборд в Grafana"],
+   ["Деплой","проект доступен по ссылке"],
+   ["Нагрузка","нагрузочный тест через k6, найти узкое место"]],
+   out:"Проект в продакшене с мониторингом"},
+  {t:"Проект: упаковка и поиск работы", tasks:[
+   ["README","описание, схема архитектуры, как запустить"],
+   ["Резюме","переписать опыт поддержки на язык бэкенда"],
+   ["Вопросы по Go","50 частых вопросов с собеседований"],
+   ["Вопросы по SQL и PHP","прогон с Claude"],
+   ["Mock-интервью","полное техническое собеседование"]],
+   out:"Резюме, портфолио и готовность к собеседованиям"}
+ ]}
+];
+
+// flatten
+const ALL=[]; let wn=0;
+PHASES.forEach((p,pi)=>p.weeks.forEach(w=>{wn++;w.n=wn;w.phase=p.name;w.tasks.forEach((t,ti)=>ALL.push({id:`w${wn}t${ti}`,week:w,title:t[0],desc:t[1],day:ti+1}))}));
+
+/* ---------- Хранилище и синхронизация с GitHub ----------
+   state:   { taskId: "YYYY-MM-DD" } — что сделано (кэш в браузере)
+   pending: { taskId: "YYYY-MM-DD" | false } — изменения, ещё не отправленные в GitHub
+   cfg:     { repo: "login/repo", token: "github_pat_…" } — только в этом браузере */
+const LS_STATE='roadmap-v1', LS_PEND='roadmap-pending-v1', LS_CFG='roadmap-sync-v1';
+const store={
+  get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+};
+let state=store.get(LS_STATE,{});
+let pending=store.get(LS_PEND,{});
+let cfg=store.get(LS_CFG,{});
+const today=()=>new Date().toLocaleDateString('sv'); // YYYY-MM-DD в местном времени
+
+function detectRepo(){
+  const m=location.hostname.match(/^([^.]+)\.github\.io$/i); if(!m)return '';
+  const seg=location.pathname.split('/').filter(Boolean)[0];
+  return seg&&!/\.html?$/i.test(seg)?`${m[1]}/${seg}`:`${m[1]}/${m[1]}.github.io`;
+}
+if(!cfg.repo)cfg.repo=detectRepo();
+const canWrite=()=>!!(cfg.repo&&cfg.token);
+const pendingCount=()=>Object.keys(pending).length;
+
+const API='https://api.github.com';
+const fileUrl=()=>`${API}/repos/${cfg.repo}/contents/progress.json`;
+const ghHeaders=()=>{const h={'Accept':'application/vnd.github+json'};if(cfg.token)h.Authorization='Bearer '+cfg.token;return h};
+const b64dec=s=>decodeURIComponent(escape(atob(s.replace(/\s/g,''))));
+const b64enc=s=>btoa(unescape(encodeURIComponent(s)));
+function httpErr(s){const e=new Error('GitHub '+s);e.status=s;return e}
+function errText(e){
+  if(e.status===401)return 'Токен не подходит или истёк. Обнови его в настройках';
+  if(e.status===403)return cfg.token?'У токена нет права на запись (Contents: Read and write) или исчерпан лимит запросов':'GitHub временно ограничил запросы. Попробуй позже или добавь токен';
+  if(e.status===404)return 'Репозиторий не найден. Проверь название и что токен выдан на этот репозиторий';
+  return 'Нет связи с GitHub. Отметки сохранены в браузере и отправятся позже';
+}
+
+async function fetchRemote(){
+  const r=await fetch(fileUrl(),{headers:ghHeaders(),cache:'no-store'});
+  if(r.status===404)return {sha:null,done:{}};
+  if(!r.ok)throw httpErr(r.status);
+  const j=await r.json();
+  let data={};try{data=JSON.parse(b64dec(j.content))}catch(e){}
+  return {sha:j.sha,done:data.done||{}};
+}
+
+function merged(done){const s={...done};for(const[k,v] of Object.entries(pending)){if(v)s[k]=v;else delete s[k]}return s}
+function applyState(next){
+  state=next;store.set(LS_STATE,state);
+  ALL.forEach(a=>{const cb=document.getElementById(a.id);if(cb)cb.checked=!!state[a.id]});
+  update(false);
+}
+
+let busy=false,timer=null,lastSync=null;
+function schedule(ms=2500){clearTimeout(timer);timer=setTimeout(()=>push(),ms)}
+
+async function pull(){
+  if(!cfg.repo){status();return}
+  if(busy)return;
+  busy=true;status('sync','Загружаю прогресс из GitHub…');
+  try{
+    const r=await fetchRemote();
+    applyState(merged(r.done));lastSync=new Date();busy=false;
+    if(pendingCount()&&canWrite())schedule(0);else status();
+  }catch(e){busy=false;status('err',errText(e))}
+}
+
+const ORDER=Object.fromEntries(ALL.map((a,i)=>[a.id,i]));
+const BY_ID=Object.fromEntries(ALL.map(a=>[a.id,a]));
+const sortDone=o=>Object.fromEntries(Object.entries(o).sort((a,b)=>(ORDER[a[0]]??1e9)-(ORDER[b[0]]??1e9)));
+const taskLabel=id=>{const a=BY_ID[id];return a?`W${String(a.week.n).padStart(2,'0')} день ${a.day}: ${a.title}`:id};
+function commitMsg(added,removed){
+  if(added.length===1&&!removed.length)return `progress: ✓ ${taskLabel(added[0])}`;
+  if(removed.length===1&&!added.length)return `progress: снята отметка ${taskLabel(removed[0])}`;
+  return `progress: +${added.length} / -${removed.length}`;
+}
+
+async function push(attempt=0){
+  if(!canWrite()){status();return}
+  if(busy){schedule(1000);return}
+  const batch={...pending};const keys=Object.keys(batch);
+  if(!keys.length){status();return}
+  busy=true;status('sync','Сохраняю в GitHub…');
+  try{
+    const r=await fetchRemote();const done={...r.done};const added=[],removed=[];
+    for(const k of keys){
+      const v=batch[k];
+      if(v){if(!done[k])added.push(k);done[k]=done[k]||v}
+      else if(done[k]){removed.push(k);delete done[k]}
+    }
+    if(added.length||removed.length){
+      const body={message:commitMsg(added,removed),
+        content:b64enc(JSON.stringify({updated:new Date().toISOString(),done:sortDone(done)},null,2)+'\n')};
+      if(r.sha)body.sha=r.sha;
+      const res=await fetch(fileUrl(),{method:'PUT',headers:{...ghHeaders(),'Content-Type':'application/json'},body:JSON.stringify(body)});
+      if((res.status===409||res.status===422)&&attempt<2){busy=false;return push(attempt+1)} // файл успел измениться — повторяем
+      if(!res.ok)throw httpErr(res.status);
+    }
+    for(const k of keys)if(pending[k]===batch[k])delete pending[k];
+    store.set(LS_PEND,pending);
+    applyState(merged(done));lastSync=new Date();busy=false;
+    if(pendingCount())schedule(500);else status();
+  }catch(e){busy=false;status('err',errText(e))}
+}
+
+function status(kind,msg){
+  const n=pendingCount();
+  if(!kind){
+    if(!cfg.repo){kind='warn';msg='Синхронизация не настроена: прогресс хранится только в этом браузере'}
+    else if(!cfg.token){kind=n?'warn':'idle';msg=n?`Есть отметки, не сохранённые в GitHub (${n}). Добавь токен`:'Прогресс загружен из GitHub. Чтобы отмечать задачи, добавь токен'}
+    else if(n){kind='sync';msg=`Ждут отправки в GitHub: ${n}`}
+    else{kind='ok';msg='Синхронизировано с GitHub'+(lastSync?' · '+lastSync.toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}):'')}
+  }
+  document.getElementById('dot').dataset.k=kind;
+  document.getElementById('syncText').textContent=msg;
+}
+
+function setDone(id,on){
+  const v=on?(state[id]||today()):false;
+  if(on)state[id]=v;else delete state[id];
+  store.set(LS_STATE,state);
+  pending[id]=v;store.set(LS_PEND,pending);
+  update(false);
+  if(canWrite())schedule();else status();
+}
+
+function initSync(){
+  const $=id=>document.getElementById(id);
+  const tokenHint=()=>{$('cfgToken').placeholder=cfg.token?'Токен сохранён. Введи новый, чтобы заменить':'github_pat_…'};
+  const normRepo=s=>s.trim().replace(/^https?:\/\/(www\.)?github\.com\//i,'').replace(/\.git$/i,'').replace(/\/+$/,'');
+  $('cfgRepo').value=cfg.repo||'';tokenHint();
+  $('cfgSave').addEventListener('click',()=>{
+    cfg.repo=normRepo($('cfgRepo').value);$('cfgRepo').value=cfg.repo;
+    const t=$('cfgToken').value.trim();if(t)cfg.token=t;$('cfgToken').value='';
+    store.set(LS_CFG,cfg);tokenHint();toast('Настройки сохранены');pull();
+  });
+  $('cfgForget').addEventListener('click',()=>{delete cfg.token;store.set(LS_CFG,cfg);tokenHint();status();toast('Токен удалён из этого браузера')});
+  $('syncNow').addEventListener('click',()=>{pendingCount()&&canWrite()?push():pull()});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!pendingCount())pull()});
+  window.addEventListener('online',()=>{if(pendingCount()&&canWrite())push()});
+  if(!canWrite())$('syncBox').open=true;
+  status();pull();
+}
+
+function promptFor(item){
+  const w=item.week;
+  return `Roadmap, фаза «${w.phase}», неделя ${w.n} «${w.t}», день ${item.day}.
+Тема: ${item.title} (${item.desc}).
+Итог недели: ${w.out}.
+
+Объясни теорию, дай практическое задание на 45–60 минут, а в конце 3 вопроса для самопроверки.`;
+}
+
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,1800)}
+async function copy(text){try{await navigator.clipboard.writeText(text);toast('Скопировано')}catch(e){toast('Не удалось скопировать, выдели текст вручную')}}
+
+function render(){
+  const root=document.getElementById('phases');root.innerHTML='';
+  PHASES.forEach(p=>{
+    const sec=document.createElement('section');sec.className='phase';
+    const first=p.weeks[0].n,last=p.weeks[p.weeks.length-1].n;
+    sec.innerHTML=`<div class="phase-head"><div><h2>${p.name}</h2><p>${p.note}</p></div><span class="label">Недели ${first}${last>first?'–'+last:''}</span></div>`;
+    p.weeks.forEach(w=>{
+      const d=document.createElement('details');d.className='week';d.id='week'+w.n;
+      const items=ALL.filter(a=>a.week===w);
+      const done=items.filter(a=>state[a.id]).length;
+      d.innerHTML=`<summary><span class="wk">W${String(w.n).padStart(2,'0')}</span><span class="wtitle">${w.t}</span><span class="wcount ${done===items.length?'full':''}">${done}/${items.length}</span></summary>
+      <div class="wbody"><ul class="tasks">${items.map(a=>`<li><label><input type="checkbox" id="${a.id}" ${state[a.id]?'checked':''}><span class="t">День ${a.day}. ${a.title}<span class="d">${a.desc}</span></span></label></li>`).join('')}</ul>
+      <div class="deliv"><b>Результат недели</b>${w.out}</div></div>`;
+      sec.appendChild(d);
+    });
+    root.appendChild(sec);
+  });
+  root.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.addEventListener('change',()=>setDone(cb.id,cb.checked)));
+  update(true);
+}
+
+function update(openCurrent){
+  const done=ALL.filter(a=>state[a.id]).length;
+  const next=ALL.find(a=>!state[a.id]);
+  document.getElementById('sDone').textContent=done;
+  document.getElementById('sTotal').textContent=ALL.length;
+  document.getElementById('sWeek').textContent=next?next.week.n:wn;
+  const pct=Math.round(done/ALL.length*100);
+  document.getElementById('sPct').textContent=pct+'%';
+  document.getElementById('pbar').style.width=pct+'%';
+  document.querySelectorAll('details.week').forEach(d=>{
+    const n=+d.id.slice(4);const items=ALL.filter(a=>a.week.n===n);const c=items.filter(a=>state[a.id]).length;
+    const el=d.querySelector('.wcount');el.textContent=`${c}/${items.length}`;el.classList.toggle('full',c===items.length);
+  });
+  if(openCurrent&&next)document.getElementById('week'+next.week.n).open=true;
+  const tt=document.getElementById('todayTask'),tm=document.getElementById('todayMeta');
+  if(next){tt.textContent=next.title;tm.textContent=`Неделя ${next.week.n} · ${next.week.t} · день ${next.day} · ${next.desc}`}
+  else{tt.textContent='Roadmap пройден';tm.textContent='Время отправлять резюме.'}
+  window._next=next;
+}
+
+document.getElementById('projPrompt').textContent=PROJECT_PROMPT;
+document.getElementById('copyProj').addEventListener('click',()=>copy(PROJECT_PROMPT));
+document.getElementById('copyToday').addEventListener('click',()=>{if(window._next)copy(promptFor(window._next))});
+document.getElementById('doneToday').addEventListener('click',()=>{const n=window._next;if(!n)return;setDone(n.id,true);const cb=document.getElementById(n.id);if(cb)cb.checked=true;update(true);toast('Готово, следующая задача на месте')});
+render();
+initSync();
+</script>
+
+</body></html>
